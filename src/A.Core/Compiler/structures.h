@@ -5,6 +5,8 @@
 #include <cstdint>
 #include "../Common/value.h"
 
+struct Value;
+
 struct Chunk {
     std::vector<uint8_t> Code;
     std::vector<Value> Constants;
@@ -13,10 +15,7 @@ struct Chunk {
         Code.push_back(b); 
     }
     
-    int AddConstant(Value value) {
-        Constants.push_back(value);
-        return Constants.size() - 1;
-    }
+    int AddConstant(Value value);
 };
 
 struct FunctionObject {
@@ -24,7 +23,8 @@ struct FunctionObject {
     Chunk chunk;
     int Arity = 0;
 
-    FunctionObject(std::string name) : Name(name) {}
+    FunctionObject(std::string name) : Name(name) { }
+    FunctionObject() : Name("") { }
 };
 
 #endif

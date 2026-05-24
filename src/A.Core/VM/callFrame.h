@@ -4,10 +4,6 @@
 #include <memory>
 #include <string>
 
-struct FunctionObject {
-    std::string name;
-};
-
 struct CallFrame {
     std::shared_ptr<FunctionObject> function;
     int ip;

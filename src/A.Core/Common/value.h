@@ -6,119 +6,129 @@
 #include <memory>
 #include <stdexcept>
 #include <functional>
+#include "../Compiler/structures.h"
 
-struct Value;
 struct FunctionObject;
-struct InstanceObject;
+class InstanceObject;
 
 enum class ValueType {
     Nil, Boolean, Number, String, NativeFn, Function, Array, Dictionary, Instance, Module
 };
 
+struct Value;
 using NativeFunction = std::function<Value(const std::vector<Value>&)>;
 
-struct InstanceObject {
-    std::string className;
-    std::unordered_map<std::string, Value> fields;
-    std::unordered_map<std::string, Value> methods;
+class InstanceObject {
+public:
+    std::string ClassName;
+    std::unordered_map<std::string, Value> Fields;
+    std::unordered_map<std::string, Value> Methods;
 
-    InstanceObject(std::string name, std::unordered_map<std::string, Value> m)
-        : className(name), methods(m) {}
-};
-
-struct FunctionObject {
-    std::string name;
+    InstanceObject(std::string className, std::unordered_map<std::string, Value> methods)
+        : ClassName(className), Methods(methods) {}
 };
 
 struct Value {
-    ValueType type;
+public:
+    ValueType Type;
+    
+private:
+    int _cachedSlotIndex = 0;
 
-    union {
-        bool boolean;
-        double number;
-    } as;
+public:
+    double _numberValue = 0.0;
+    bool _boolValue = false;
+    std::string _objValue = ""; // Holds standard String values safely
+    
+    NativeFunction _nativeFnValue;
+    std::shared_ptr<FunctionObject> _functionValue;
+    std::shared_ptr<std::vector<Value>> _arrayValue;
 
-    std::string string_val;
-    NativeFunction native_fn;
-    std::shared_ptr<FunctionObject> function_val;
-    std::shared_ptr<std::vector<Value>> array_val;
-    std::shared_ptr<std::unordered_map<std::string, Value>> dict_val;
-    std::shared_ptr<InstanceObject> instance_val;
-    std::shared_ptr<std::unordered_map<std::string, Value>> module_val;
+    // --- NEW OBJECT TYPE BACKING FIELDS ---
+    std::shared_ptr<std::unordered_map<std::string, Value>> _dictionaryValue;
+    std::shared_ptr<InstanceObject> _instanceValue;
+    std::shared_ptr<std::unordered_map<std::string, Value>> _moduleValue;
 
-    Value() : type(ValueType::Nil) { as.boolean = false; }
-    Value(double val) : type(ValueType::Number) { as.number = val; }
-    Value(bool val) : type(ValueType::Boolean) { as.boolean = val; }
-    Value(std::string val) : type(ValueType::String), string_val(val) {}
-    Value(NativeFunction fn) : type(ValueType::NativeFn), native_fn(fn) {}
-    Value(std::shared_ptr<FunctionObject> fn) : type(ValueType::Function), function_val(fn) {}
-    Value(std::shared_ptr<std::vector<Value>> arr) : type(ValueType::Array), array_val(arr) {}
-    Value(std::shared_ptr<std::unordered_map<std::string, Value>> dict) : type(ValueType::Dictionary), dict_val(dict) {}
-    Value(std::shared_ptr<InstanceObject> inst) : type(ValueType::Instance), instance_val(inst) {}
+    // --- Existing Base Constructors ---
+    Value(int fastSlotIndex)
+        : Type(ValueType::Number), _cachedSlotIndex(fastSlotIndex), _numberValue(fastSlotIndex) {}
 
+    Value()
+        : Type(ValueType::Nil) {}
+
+    Value(double value)
+        : Type(ValueType::Number), _numberValue(value) {}
+
+    Value(bool value)
+        : Type(ValueType::Boolean), _boolValue(value) {}
+
+    Value(std::string value)
+        : Type(ValueType::String), _objValue(value) {}
+
+    Value(const char* value)
+        : Type(ValueType::String), _objValue(value ? value : "") {}
+
+    Value(NativeFunction nativeFn)
+        : Type(ValueType::NativeFn), _nativeFnValue(nativeFn) {}
+
+    Value(std::shared_ptr<FunctionObject> function)
+        : Type(ValueType::Function), _functionValue(function) {}
+
+    Value(std::shared_ptr<std::vector<Value>> array)
+        : Type(ValueType::Array), _arrayValue(array) {}
+
+    // --- NEW OBJECT CONSTRUCTORS ---
+    Value(std::shared_ptr<std::unordered_map<std::string, Value>> dict)
+        : Type(ValueType::Dictionary), _dictionaryValue(dict) {}
+
+    Value(std::shared_ptr<InstanceObject> instance)
+        : Type(ValueType::Instance), _instanceValue(instance) {}
+
+    Value(std::shared_ptr<std::unordered_map<std::string, Value>> moduleDict, bool isModule)
+        : Type(isModule ? ValueType::Module : ValueType::Module), _moduleValue(moduleDict) {}
+
+    // --- Direct Type Extraction Utility Wrappers ---
+    int AsCachedSlot() const { return _cachedSlotIndex; }
+    
     double AsNumber() const {
-        if (type != ValueType::Number) throw std::runtime_error("Value is not a number.");
-        return as.number;
+        if (Type != ValueType::Number) throw std::runtime_error("Value is not a number.");
+        return _numberValue;
     }
 
     bool AsBoolean() const {
-        if (type != ValueType::Boolean) throw std::runtime_error("Value is not a boolean.");
-        return as.boolean;
+        if (Type != ValueType::Boolean) throw std::runtime_error("Value is not a boolean.");
+        return _boolValue;
     }
 
     std::string AsString() const {
-        if (type != ValueType::String) throw std::runtime_error("Value is not a string.");
-        return string_val;
+        if (Type != ValueType::String) throw std::runtime_error("Value is not a string.");
+        return _objValue;
+    }
+
+    NativeFunction AsNativeFn() const {
+        if (Type != ValueType::NativeFn) throw std::runtime_error("Value is not a native function.");
+        return _nativeFnValue;
+    }
+
+    std::shared_ptr<FunctionObject> AsFunction() const {
+        if (Type != ValueType::Function) throw std::runtime_error("Value is not a compiled user function.");
+        return _functionValue;
     }
 
     std::vector<Value>& AsArray() const {
-        if (type != ValueType::Array) throw std::runtime_error("Value is not an Array collection container.");
-        return *array_val;
+        if (Type != ValueType::Array || !_arrayValue) throw std::runtime_error("Value is not an Array collection container.");
+        return *_arrayValue;
     }
-
-    std::unordered_map<std::string, Value>& AsDictionary() const {
-        if (type != ValueType::Dictionary || !dict_val) {
-            throw std::runtime_error("Object is not a valid Dictionary.");
-        }
-        return *dict_val;
-    }
-
-    std::unordered_map<std::string, Value>& AsModule() const {
-        if (type != ValueType::Module || !module_val) {
-            throw std::runtime_error("Object is not a valid Static Module/Namespace.");
-        }
-        return *module_val;
-    }
-
-    InstanceObject& AsInstance() const {
-        if (type != ValueType::Instance) throw std::runtime_error("Object is not a valid Class/Struct Instance.");
-        return *instance_val;
-    }
-
-    std::string ToString() const {
-        switch (type) {
-            case ValueType::Nil:        return "nil";
-            case ValueType::Boolean:    return as.boolean ? "true" : "false";
-            case ValueType::Number:     {
-                std::string s = std::to_string(as.number);
-                s.erase(s.find_last_not_of('0') + 1, std::string::npos);
-                if(s.back() == '.') s.pop_back();
-                return s;
-            }
-            case ValueType::String:     return string_val;
-            case ValueType::NativeFn:   return "<native fn>";
-            case ValueType::Function:   return "<fn " + (function_val ? function_val->Name : "") + ">";
-            case ValueType::Array:      return "[Array]";
-            case ValueType::Dictionary: return "[Dictionary]";
-            case ValueType::Instance:   return "[Instance]";
-            case ValueType::Module:     return "[Static Module Namespace]";
-            default:                    return "unknown";
-        }
-    }
+    
+    std::unordered_map<std::string, Value>& AsDictionary() const;
+    InstanceObject& AsInstance() const;
+    std::unordered_map<std::string, Value>& AsModule() const;
 
     bool is_falsey() const {
-        return type == ValueType::Nil || (type == ValueType::Boolean && !as.boolean);
+        return Type == ValueType::Nil || (Type == ValueType::Boolean && !_boolValue);
     }
+
+    std::string ToString() const;
 };
 
 #endif

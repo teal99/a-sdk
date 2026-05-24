@@ -126,16 +126,17 @@ VM::InterpretResult VM::Interpret(Chunk chunk, bool isReplMode) {
         }
     }
 
-    FunctionObject scriptMain(isReplMode ? "repl_line" : "main");
-    scriptMain.chunk.Code = chunk.Code;
-    scriptMain.chunk.Constants = chunk.Constants;
-    
+    auto scriptMain = std::make_shared<FunctionObject>(isReplMode ? "repl_line": "main");
+    scriptMain->chunk.Code = chunk.Code;
+    scriptMain->chunk.Constants = chunk.Constants;
+
     _frameCount = 0;
     int slotStart = _stackTop;
-    
-    auto sharedMain = std::make_shared<FunctionObject>(scriptMain);
-    Push(Value(sharedMain));
-    _frames[_frameCount++] = CallFrame(sharedMain, slotStart);
+
+    Value scriptMainValue(scriptMain);
+    Push(scriptMainValue);
+
+    _frames[_frameCount++] = CallFrame(scriptMain, slotStart);
 
     return Run();
 }

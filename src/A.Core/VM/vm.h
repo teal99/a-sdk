@@ -30,13 +30,13 @@ private:
     static const std::unordered_map<std::string, std::function<Value(const std::vector<Value>&)>> _stringPrototype;
     static const std::unordered_map<std::string, std::function<Value(const std::vector<Value>&)>> _arrayPrototype;
 
-    std::array<CallFrame, 1024> _frames;
+    std::array<CallFrame, 1024> _frames{};
     int _frameCount = 0;
     
-    std::array<Value, 2048> _stack;
+    std::array<Value, 2048> _stack{};
     int _stackTop = 0;
 
-    std::array<Value, 256> _globalSlots;
+    std::array<Value, 256> _globalSlots{};
     std::unordered_map<std::string, int> _globalSymbolTable;
     int _globalCount = 0;
 

@@ -1,5 +1,6 @@
 {
     "relaytokens": false,
     "relayopcodes": false,
+    "usenativevm": true,
     "environment": "development"
 }

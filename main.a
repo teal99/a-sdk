@@ -1,8 +1,10 @@
 use Standard.Console as c
 
-let inventory_data = {
-    owner: "Nate",
-    items: [10, 20, 30]
+fn fib(n) {
+    if n < 2 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
 }
 
-c.Print(inventory_data.owner, inventory_data.items)
+c.Print(fib(28))

@@ -2,6 +2,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\A.Core\A.Core.csproj" />
+      <None Include="..\..\config.json">
+      <Link>config.json</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <PropertyGroup>
