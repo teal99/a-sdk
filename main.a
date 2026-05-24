@@ -1,0 +1,8 @@
+use Standard.Console as c
+
+let inventory_data = {
+    owner: "Nate",
+    items: [10, 20, 30]
+}
+
+c.Print(inventory_data.owner, inventory_data.items)
