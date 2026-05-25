@@ -17,10 +17,8 @@ public static class ProcessModule
         
         try
         {
-            // Configure a hidden cross-platform shell process wrapper
             using Process proc = new Process();
             
-            // For Windows use cmd.exe, for Mac/Linux use /bin/sh or bash natively
             if (OperatingSystem.IsWindows())
             {
                 proc.StartInfo.FileName = "cmd.exe";
@@ -39,7 +37,6 @@ public static class ProcessModule
 
             proc.Start();
             
-            // Read both standard outputs and terminal error matrices
             string output = proc.StandardOutput.ReadToEnd();
             string error = proc.StandardError.ReadToEnd();
             proc.WaitForExit();
@@ -49,7 +46,7 @@ public static class ProcessModule
                 return new Value($"[Shell Error - Exit Code {proc.ExitCode}]: {error.Trim()}");
             }
 
-            return new Value(output.Trim()); // Return the terminal output text string cleanly
+            return new Value(output.Trim());
         }
         catch (Exception ex)
         {

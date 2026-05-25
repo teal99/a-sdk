@@ -8,7 +8,6 @@ public static class TimeModule
 {
     public static Value Now(Value[] _)
     {
-        // Returns unix time millisecond signature epoch float metrics directly
         double epochMs = DateTime.UtcNow.Subtract(DateTime.UnixEpoch).TotalMilliseconds;
         return new Value(epochMs);
     }

@@ -6,7 +6,7 @@ public class FunctionObject
 {
     public string Name { get; }
     public Chunk Chunk { get; } = new();
-    public int Arity { get; set; } // Track number of expected parameters
+    public int Arity { get; set; }
 
     public FunctionObject(string name)
     {

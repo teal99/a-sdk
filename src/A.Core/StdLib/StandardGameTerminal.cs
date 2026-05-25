@@ -49,7 +49,7 @@ public static class GameTerminalModule
             string? input = Console.ReadLine();
             if (int.TryParse(input, out int sel) && sel >= 1 && sel <= choices.Count)
             {
-                return choices[sel - 1]; // Return selected string choice back to the VM stack
+                return choices[sel - 1];
             }
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("Invalid choice. Try again.");

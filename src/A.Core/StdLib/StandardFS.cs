@@ -35,7 +35,7 @@ public static class FileModule
         string content = args[1].AsString();
 
         File.WriteAllText(path, content);
-        return new Value(); // Returns a Nil variant
+        return new Value();
     }
         public static Value Exists(Value[] args)
     {
@@ -47,7 +47,7 @@ public static class FileModule
     {
         ValidateArgs("FileSystem.Append", args, 2, Common.ValueType.String, Common.ValueType.String);
         File.AppendAllText(args[0].AsString(), args[1].AsString());
-        return new Value(); // Returns Nil
+        return new Value();
     }
 
     public static Value Delete(Value[] args)
@@ -67,7 +67,7 @@ public static class FileModule
         string[] lines = File.ReadAllLines(path);
         List<Value> arrayList = new();
         foreach (var line in lines) arrayList.Add(new Value(line));
-        return new Value(arrayList); // Returns native Array type primitive
+        return new Value(arrayList);
     }
 
     public static Value WriteLines(Value[] args)

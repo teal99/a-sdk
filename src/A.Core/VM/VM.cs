@@ -155,7 +155,6 @@ public class VM
 
                 case OpCode.GetGlobal:
                     {
-                        // Read the operand by advancing the true array-backed pointer directly
                         byte slotIndex = _frames[activeFrameIndex].Function.Chunk.Code[_frames[activeFrameIndex].Ip++];
                         Push(_globalSlots[slotIndex]); 
                         break;
@@ -164,7 +163,6 @@ public class VM
                 case OpCode.GetGlobalFast:
                 case OpCode.AssignGlobalFast:
                     {
-                        // Read the slot coordinate byte operand directly, bypassing the constant pool
                         byte slotIndex = _frames[activeFrameIndex].Function.Chunk.Code[_frames[activeFrameIndex].Ip++];
                         _globalSlots[slotIndex] = Peek(0);
                         break;
@@ -186,7 +184,6 @@ public class VM
                     {
                         Value b = Pop();
                         Value a = Pop();
-                        // Safely evaluate matching primitive variant types and string outputs universally
                         bool areEqual = a.Type == b.Type && a.ToString() == b.ToString();
                         Push(new Value(areEqual));
                         break;
@@ -196,7 +193,6 @@ public class VM
                     {
                         Value b = Pop();
                         Value a = Pop();
-                        // Invert the structural equality result
                         bool areNotEqual = !(a.Type == b.Type && a.ToString() == b.ToString());
                         Push(new Value(areNotEqual));
                         break;
@@ -206,11 +202,11 @@ public class VM
                         byte argCount = ReadByte();
                         Value callee = _stack[_stackTop - argCount - 1];
                         
-                        if (callee.Type == Common.ValueType.NativeFn) // Look beneath the arguments to find the function object
+                        if (callee.Type == Common.ValueType.NativeFn)
                         {
                             Value[] args = new Value[argCount];
                             for (int i = argCount - 1; i >= 0; i--) args[i] = Pop();
-                            Pop(); // Discard the native function identifier from the stack
+                            Pop();
                             Value result = callee.AsNativeFn()(args);
                             Push(result);
                         }
@@ -459,9 +455,8 @@ public class VM
                         byte index = _frames[activeFrameIndex].Function.Chunk.Code[_frames[activeFrameIndex].Ip++];
                         string propertyName = _frames[activeFrameIndex].Function.Chunk.Constants[index].AsString();
 
-                        Value instanceValue = Pop(); // Extract the container/instance object from the value stack top
+                        Value instanceValue = Pop();
 
-                        // --- ROUTE 1: STATIC NAMESPACES & STATIC LIBRARIES ---
                         if (instanceValue.Type == Common.ValueType.Module)
                         {
                             var moduleDict = instanceValue.AsModule();
@@ -484,7 +479,6 @@ public class VM
                             break;
                         }
 
-                        // --- ROUTE 2: DYNAMIC USER DICTIONARIES ---
                         if (instanceValue.Type == Common.ValueType.Dictionary)
                         {
                             var dict = instanceValue.AsDictionary();
@@ -493,20 +487,16 @@ public class VM
                             break;
                         }
 
-                        // --- ROUTE 3: CLASS / STRUCT INSTANCES (DYNAMIC METHOD BINDING) ---
                         if (instanceValue.Type == Common.ValueType.Instance)
                         {
                             var instanceObj = instanceValue.AsInstance();
 
-                            // A. State variables/Fields take explicit data priority tracking lookahead
                             if (instanceObj.Fields.TryGetValue(propertyName, out Value? fieldValue))
                             {
                                 Push(fieldValue);
                                 break;
                             }
 
-                            // B. FIX: Look up the method dynamically using the qualified prefix (e.g., "Player.takeDamage")
-                            // straight from your global slots table! This completely bypasses early-binding index crashes.
                             string fullyQualifiedMethodName = instanceObj.ClassName + "." + propertyName;
                             
                             if (_globalSymbolTable.TryGetValue(fullyQualifiedMethodName, out int methodSlot) && methodSlot < _globalCount)
@@ -538,7 +528,6 @@ public class VM
                             }
                         }
 
-                        // --- ROUTE 4: PRIMITIVE PROTOTYPES FALLBACK SUITE ---
                         Func<Value[], Value>? resolvedPrimitiveMethod = null;
                         if (instanceValue.Type == Common.ValueType.String) _stringPrototype.TryGetValue(propertyName, out resolvedPrimitiveMethod);
                         else if (instanceValue.Type == Common.ValueType.Array) _arrayPrototype.TryGetValue(propertyName, out resolvedPrimitiveMethod);
@@ -555,7 +544,6 @@ public class VM
                             break;
                         }
 
-                        // COMPREHENSIVE TYPE SAFETY DEFENSE GUARD
                         LastRuntimeError = new Diagnostics.AError
                         {
                             Type = "Property Error",
@@ -571,20 +559,16 @@ public class VM
                         byte index = _frames[activeFrameIndex].Function.Chunk.Code[_frames[activeFrameIndex].Ip++];
                         string propertyName = _frames[activeFrameIndex].Function.Chunk.Constants[index].AsString();
 
-                        // Value stack layout right now: [instance/container, value_to_assign] -> assigned value is on top!
                         Value valueToAssign = Pop();
                         Value containerValue = Pop();
 
-                        // A. Handle mutations inside User Struct/Class instances dynamically
                         if (containerValue.Type == Common.ValueType.Instance)
                         {
                             var instanceObj = containerValue.AsInstance();
-                            instanceObj.Fields[propertyName] = valueToAssign; // Assign or update the field value
+                            instanceObj.Fields[propertyName] = valueToAssign;
                             
-                            // Push the assigned value back onto the stack to match expression semantics requirements
                             Push(valueToAssign); 
                         }
-                        // B. Handle mutations inside standard Dictionaries dynamically
                         else if (containerValue.Type == Common.ValueType.Dictionary)
                         {
                             var dict = containerValue.AsDictionary();
@@ -607,10 +591,8 @@ public class VM
                     }
                 case OpCode.DefineClass:
                     {
-                        // Read the class array slot operand byte directly, bypassing the constant pool
                         byte classSlotIndex = _frames[activeFrameIndex].Function.Chunk.Code[_frames[activeFrameIndex].Ip++];
 
-                        // Initialize the class slot as a clean Module object container natively inside the global slots array
                         _globalSlots[classSlotIndex] = new Value(new Dictionary<string, Value>(), isModule: false);
                         break;
                     }
@@ -620,11 +602,9 @@ public class VM
                         byte classSlotIndex = _frames[activeFrameIndex].Function.Chunk.Code[_frames[activeFrameIndex].Ip++];
                         byte argCount = _frames[activeFrameIndex].Function.Chunk.Code[_frames[activeFrameIndex].Ip++];
 
-                        // Pop constructor parameters off the stack tracking allocations sequentially
                         Value[] constructorArgs = new Value[argCount];
                         for (int i = argCount - 1; i >= 0; i--) constructorArgs[i] = Pop();
 
-                        // Discover the original class name string by searching the global symbol table mappings backward
                         string className = "UserStructClass";
                         foreach (var kvp in _globalSymbolTable)
                         {
@@ -635,39 +615,29 @@ public class VM
                             }
                         }
                         
-                        // Build a fresh, isolated InstanceObject runtime heap container allocation
                         var emptyMethodsVTable = new Dictionary<string, Value>(); 
                         var instance = new InstanceObject(className, emptyMethodsVTable);
                         Value instanceValue = new Value(instance);
 
-                        // AUTOMATED OPTIONAL CONSTRUCTOR INITIALIZATION PASS:
                         string constructorName = className + ".init";
                         if (_globalSymbolTable.TryGetValue(constructorName, out int constructorSlot))
                         {
                             Value constructorMethod = _globalSlots[constructorSlot];
                             if (constructorMethod.Type == Common.ValueType.Function)
                             {
-                                // Spawn the sub-executor engine context wrapper safely
                                 var subExecutor = new VM();
 
-                                // Pre-seed your sub-executor's baseline value stack
-                                // Push the newly created instance value straight into Stack Slot 0 ("this")
                                 subExecutor.Push(instanceValue);
 
-                                // Next, push the remainder of your constructor arguments right behind it
                                 foreach (var arg in constructorArgs)
                                 {
                                     subExecutor.Push(arg);
                                 }
 
-                                // Execute the initialization chunk statements natively.
-                                // Because C# objects pass by reference, any field mutations made via 'this' 
-                                // inside the sub-VM modify the 'instance' object in memory instantly
                                 subExecutor.Interpret(constructorMethod.AsFunction().Chunk);
                             }
                         }
 
-                        // Push the completely populated structural instance object directly back onto the evaluation stack
                         Push(instanceValue);
                         break;
                     }
@@ -678,7 +648,7 @@ public class VM
 
                         if (_frameCount == 0)
                         {
-                            // If we finished executing the top-level script wrapper, terminate cleanly
+                            // If it's finished executing the top-level script wrapper, terminate cleanly
                             return InterpretResult.Ok;
                         }
 
@@ -774,7 +744,7 @@ public class VM
         int activeFrameIndex = _frameCount - 1;
         return _frames[activeFrameIndex].Function.Chunk.Code[_frames[activeFrameIndex].Ip++];
     }
-    private Value ReadConstant()
+    private Value ReadConstant() // UNUSED
     {
         byte index = ReadByte();
         return CurrentFrame.Function.Chunk.Constants[index];
@@ -790,9 +760,8 @@ public class VM
     // --- EXTRA HELPERS ---
     private static bool IsFalsey(Value value)
     {
-        // Nil and explicitly false Booleans are treated as falsey conditions
         if (value.Type == Common.ValueType.Nil) return true;
         if (value.Type == Common.ValueType.Boolean) return !value.AsBoolean();
-        return false; // Numbers and strings are considered truthy
+        return false;
     }
 }

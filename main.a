@@ -1,10 +1,47 @@
+use Standard.Game.Visual as v
 use Standard.Console as c
 
-fn fib(n) {
-    if n < 2 {
-        return n
-    }
-    return fib(n - 1) + fib(n - 2)
+v.Init(800, 600, "A-Language Graphics Sandbox")
+
+let mut playerX = 375
+let mut playerY = 275
+let mut speed = 6
+
+let bgColor = "0x1A1A2E"
+let playerColor = "0xE94560"
+let wallColor = "0x16C79A"
+
+fn Update() {
+    v.Clear(bgColor)
+
+    if v.IsKeyDown("UP")    { playerY = playerY - speed }
+    if v.IsKeyDown("DOWN")  { playerY = playerY + speed }
+    if v.IsKeyDown("LEFT")  { playerX = playerX - speed }
+    if v.IsKeyDown("RIGHT") { playerX = playerX + speed }
+
+    if playerX < 10 { playerX = 10 }
+    if playerX > 740 { playerX = 740 }
+    if playerY < 10 { playerY = 10 }
+    if playerY > 540 { playerY = 540 }
 }
 
-c.Print(fib(28))
+fn Render() {
+    v.DrawRect(0, 0, 800, 10, wallColor)     
+    v.DrawRect(0, 590, 800, 10, wallColor)   
+    v.DrawRect(0, 0, 10, 600, wallColor)     
+    v.DrawRect(790, 0, 10, 600, wallColor)   
+
+    v.DrawRect(playerX, playerY, 50, 50, playerColor)
+    v.Render()
+}
+
+fn Main() {
+    c.Print("Preparing game loop...")
+    while (v.IsOpen()) {
+        Update()
+        Render()
+    }
+    c.Print("Ending game loop!")
+}
+
+Main()

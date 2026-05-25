@@ -49,7 +49,6 @@ public static class MathModule
         return new Value(Math.Ceiling(num));
     }
 
-    // --- INTEROP VALIDATION UTILITIES ---
     private static void ValidateArgCount(string functionName, Value[] args, int expected)
     {
         if (args.Length != expected)

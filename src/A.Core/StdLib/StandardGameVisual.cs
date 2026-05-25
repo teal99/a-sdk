@@ -41,7 +41,6 @@ public static class GameVisualModule
         int height = (int)args[1].AsNumber();
         string title = args[2].AsString();
 
-        // Initialize native hardware window context
         Raylib.InitWindow(width, height, title);
         Raylib.SetTargetFPS(60);
 
@@ -52,7 +51,6 @@ public static class GameVisualModule
 
     public static Value IsOpen(Value[] args)
     {
-        // Returns true if the user hasn't clicked close or pressed ESC
         bool open = !Raylib.WindowShouldClose();
 
         if (!open) Raylib.CloseWindow();

@@ -75,6 +75,5 @@ public static class StdLibRegistry
         { "Standard.Game.Visual.Render",            GameVisualModule.Render         }
     };
 
-    // Dynamically exposes the total count of built-in standard library elements
     public static int BuiltInCount => Functions.Count;
 }

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Text;
 using A.Core.Common;
 using A.Core.Compiler;
@@ -19,7 +17,6 @@ public class Parser
     private Chunk _chunk = new();
 
 
-    // Tracks active global variable slot allocations at compile-time
     private static readonly Dictionary<string, byte> _globalSlotMapping = new();
     private byte _nextGlobalSlotIndex = 0;
 
@@ -50,7 +47,6 @@ public class Parser
         {
             _globalSlotMapping[fullPath] = slot;
 
-            // Automatically map the short-name fallbacks (e.g. 'Console.Print' -> same slot)
             int firstDot = fullPath.IndexOf('.');
             if (firstDot != -1)
             {
@@ -73,7 +69,6 @@ public class Parser
         byte StandardLibraryBuiltInCount = (byte)StdLib.StdLibRegistry.Functions.Count;
         _nextGlobalSlotIndex = StandardLibraryBuiltInCount;
 
-        // RELAYTOKENS=true
         if (Config.RelayTokens)
         {
             Console.ForegroundColor = ConsoleColor.Magenta;
@@ -88,7 +83,6 @@ public class Parser
             Console.ResetColor();
         }
 
-        // Advance past initial newline tokens layout markers smoothly
         while (Match(TokenType.Newline));
 
         while (!IsAtEnd() && Peek().Type != TokenType.EOF)
@@ -97,13 +91,11 @@ public class Parser
             while (Match(TokenType.Newline)) { /* skip leading newlines */ }
         }
 
-        // Write a clean implicit EOF return block fallback parameter marker
         _chunk.Write(OpCode.Constant);
         int nilIndex = _chunk.AddConstant(new Value());
         _chunk.Write((byte)nilIndex);
         _chunk.Write(OpCode.Return);
 
-        // RELAYOPCODES=true
         if (Config.RelayOpcodes)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -156,34 +148,27 @@ public class Parser
             
             byte slotIndex = ResolveGlobalSlotIndex(prefixedGlobalName);
             _chunk.Write(OpCode.DefineGlobal);
-            _chunk.Write(slotIndex); // Emit raw byte slot index
+            _chunk.Write(slotIndex);
         }
     }
 
     private void CompileMemberAccess()
     {
-        // Consume the property or method name token following the dot '.'
         Token memberToken = Consume(TokenType.Identifier, "Expected property or method name after '.'.");
         int nameIndex = _chunk.AddConstant(new Value(memberToken.Lexeme));
 
-        // THE ASSIGNMENT INTERCEPTOR DETECTOR
-        // If an '=' operator follows the property name (e.g., this.name = name), compile it as a setter
         if (Match(TokenType.Equal))
         {
-            // Parse the right-hand expression value being assigned
             ParseExpression(Precedence.None);
 
-            // Emit the universal property setter instruction followed by its constant pool text index operand byte
             _chunk.Write(OpCode.SetProperty);
             _chunk.Write((byte)nameIndex);
         }
-        // Otherwise, compile it as a standard Getter or Method Invocation
         else
         {
             _chunk.Write(OpCode.GetProperty);
             _chunk.Write((byte)nameIndex);
 
-            // Handle optional Method Invocations Parentheses (e.g. obj.method())
             if (Match(TokenType.LeftParen))
             {
                 byte argCount = 0;
@@ -323,15 +308,12 @@ public class Parser
         Chunk mainChunkBackup = _chunk;
         _chunk = function.Chunk;
 
-        // Save any top-level loop local tracking lists currently open
         var parentLocalsBackup = new List<Local>(_compiler.Locals);
         int parentScopeDepthBackup = _compiler.ScopeDepth;
 
-        // Initialize a fresh, isolated local frame environment specifically for this function context
         _compiler.Locals.Clear();
-        _compiler.ScopeDepth = 1; // Functions start their internal local lexical depth at 1
+        _compiler.ScopeDepth = 1;
 
-        // Register a dummy local slot at index 0 to account for the FunctionObject sitting at the base of the CallFrame
         _compiler.Locals.Add(new Local("", _compiler.ScopeDepth));
 
         Consume(TokenType.LeftParen, "Expected '(' after function identifier.");
@@ -358,13 +340,11 @@ public class Parser
         }
         Consume(TokenType.RightBrace, "Expected '}' to terminate function.");
 
-        // Fallback safe implicit return
         _chunk.Write(OpCode.Constant);
         int nilIndex = _chunk.AddConstant(new Value());
         _chunk.Write((byte)nilIndex);
         _chunk.Write(OpCode.Return);
 
-        // Completely reload our parent script configurations on exit
         _compiler.Locals.Clear();
         _compiler.Locals.AddRange(parentLocalsBackup);
         _compiler.ScopeDepth = parentScopeDepthBackup;
@@ -373,19 +353,15 @@ public class Parser
 
         string prefixedFuncName = _currentNamespacePrefix + nameToken.Lexeme;
         
-        // Pack the compiled user function container object safely inside your constants pool
         int funcIndex = _chunk.AddConstant(new Value(function));
         
-        // Resolve the compile-time flat numeric slot index byte for the function name
         byte slotIndex = ResolveGlobalSlotIndex(prefixedFuncName);
         
-        // Emit instructions to load your function object onto the VM value stack
         _chunk.Write(OpCode.Constant);
         _chunk.Write((byte)funcIndex);
         
-        // Define the function directly into its pre-allocated high-speed global slot array cell coordinate!
         _chunk.Write(OpCode.DefineGlobal);
-        _chunk.Write(slotIndex); // Emits raw byte slot operand index matching our optimized VM loop
+        _chunk.Write(slotIndex);
     }
 
     private void ParseClassDeclaration()
@@ -418,18 +394,16 @@ public class Parser
         }
         Consume(TokenType.RightBrace, "Expected '}' to close class declaration blueprint block.");
 
-        // FIX: Resolve the true, flat global slot array number index byte for this class name!
         byte classSlotIndex = ResolveGlobalSlotIndex(className);
         
         _chunk.Write(OpCode.DefineClass);
-        _chunk.Write(classSlotIndex); // Emit raw byte slot operand directly
+        _chunk.Write(classSlotIndex);
     }
 
     private void CompileInstantiation()
     {
         Token classToken = Consume(TokenType.Identifier, "Expected structural class name template following 'new' instantiation operator.");
         
-        // FIX: Resolve the direct global slot index byte for the instantiating class target name!
         byte classSlotIndex = ResolveGlobalSlotIndex(classToken.Lexeme);
 
         Consume(TokenType.LeftParen, "Expected '(' parameters block initialization open brace marker.");
@@ -445,7 +419,7 @@ public class Parser
         Consume(TokenType.RightParen, "Expected ')' to close initializer arguments stream sequence.");
 
         _chunk.Write(OpCode.Instantiate);
-        _chunk.Write(classSlotIndex); // Emit raw byte slot operand directly
+        _chunk.Write(classSlotIndex);
         _chunk.Write(argCount); 
     }
 
@@ -453,14 +427,11 @@ public class Parser
     {
         if (Peek().Type == TokenType.Newline || Peek().Type == TokenType.EOF || Peek().Type == TokenType.RightBrace)
         {
-            // Empty returns pass back Nil implicitly
             _chunk.Write(OpCode.Constant); 
-            // Assume index points to a Nil variant, or emit an explicit Nil opcode
             _chunk.Write(OpCode.Return);
         }
         else
         {
-            // Parse the return expression value, then emit the frame departure opcode
             ParseExpression(Precedence.None);
             _chunk.Write(OpCode.Return);
         }
@@ -469,7 +440,6 @@ public class Parser
     private void ParseImportDeclaration()
     {
         Token rootToken = Consume(TokenType.Identifier, "Expected module path after 'use'.");
-        // Use StringBuilder for efficient concatenation of module path segments
         var fullPathBuilder = new StringBuilder(rootToken.Lexeme);
 
         while (Match(TokenType.Dot))
@@ -479,18 +449,15 @@ public class Parser
         }
         string fullPath = fullPathBuilder.ToString();
 
-        // Compute the fallback base name (e.g., Standard.Console -> Console)
         int lastDot = fullPath.LastIndexOf('.');
         string alias = lastDot == -1 ? fullPath : fullPath[(lastDot + 1)..];
 
-        // Safely capture the custom alias override if the 'as' keyword is present
         if (Match(TokenType.As))
         {
             Token customAliasToken = Consume(TokenType.Identifier, "Expected custom alias identifier name after 'as'.");
             alias = customAliasToken.Lexeme;
         }
 
-        // Register the final alias key mapping (Applies globally to both Standard and local files)
         _imports[alias] = fullPath;
 
         // --- NEW EXTERNAL FILE LOADING HOOK ---
@@ -533,17 +500,14 @@ public class Parser
         else
         {
             ParseExpression(Precedence.None);
-            // Explicitly pop expression statement trailing remnants
             _chunk.Write(OpCode.Pop);
         }
     }
 
     private void ParseIfStatement()
     {
-        // List to keep track of all exit jumps from each branch so we can patch them at the very end
         List<int> exitJumps = new();
 
-        // Compile the primary condition and block
         ParseExpression(Precedence.None);
         int jumpPlaceholder = EmitJump(OpCode.JumpIfFalse);
 
@@ -557,22 +521,18 @@ public class Parser
         }
         Consume(TokenType.RightBrace, "Expected '}' after conditional body code.");
 
-        // If there's an else or else-if, the true block needs to skip to the very end
         if (Peek().Type == TokenType.Else)
         {
             int exitJump = EmitJump(OpCode.Jump);
             exitJumps.Add(exitJump);
         }
 
-        // Patch the first condition failure to land right after the true block
         PatchJump(jumpPlaceholder);
 
-        // Loop through any cascading 'else if' chains iteratively to keep bytecode aligned
         while (Match(TokenType.Else))
         {
             if (Match(TokenType.If))
             {
-                // Compile the 'else if' condition
                 ParseExpression(Precedence.None);
                 int elseIfFalseJump = EmitJump(OpCode.JumpIfFalse);
 
@@ -592,12 +552,10 @@ public class Parser
                     exitJumps.Add(exitJump);
                 }
 
-                // A false condition on this 'else if' lands at the next branch check
                 PatchJump(elseIfFalseJump);
             }
             else
             {
-                // Final fallback 'else' block
                 Consume(TokenType.LeftBrace, "Expected '{' before else body code.");
                 while (Match(TokenType.Newline)) { /* skip leading newlines */ }
 
@@ -607,11 +565,10 @@ public class Parser
                     while (Match(TokenType.Newline)) { /* skip leading newlines */ }
                 }
                 Consume(TokenType.RightBrace, "Expected '}' after else body code.");
-                break; // An 'else' block ends the chain completely
+                break;
             }
         }
 
-        // Patch all success exit jumps to land here at the end of the conditional block
         foreach (int jumpLocation in exitJumps)
         {
             PatchJump(jumpLocation);
@@ -620,16 +577,12 @@ public class Parser
 
     private void ParseWhileStatement()
     {
-        // Record the exact bytecode location right before the condition compiles
         int loopStartOffset = _chunk.Code.Count;
 
-        // Compile the conditional check expression
         ParseExpression(Precedence.None);
 
-        // Emit a forward jump placeholder to escape the loop if the check evaluates to false
         int exitJumpPlaceholderOffset = EmitJump(OpCode.JumpIfFalse);
 
-        // Consume the loop block statement body
         Consume(TokenType.LeftBrace, "Expected '{' before while loop body.");
         while (Match(TokenType.Newline)) { /* skip leading newlines */ }
 
@@ -640,10 +593,7 @@ public class Parser
         }
         Consume(TokenType.RightBrace, "Expected '}' after while loop body.");
 
-        // Emit a backward jump instruction to rewind the instruction pointer back to loopStartOffset
         EmitLoopJump(loopStartOffset);
-
-        // Patch the forward exit jump placeholder so it points to the instruction following the loop block
         PatchJump(exitJumpPlaceholderOffset);
     }
 
@@ -779,7 +729,6 @@ public class Parser
     {
         byte elementCount = 0;
         
-        // Skip initial line breaks inside the opening bracket context safely
         while (Match(TokenType.Newline)) { /* skip leading newlines */ }
 
         if (Peek().Type != TokenType.RightBracket)
@@ -809,11 +758,9 @@ public class Parser
 
     private void CompileSubscriptIndex()
     {
-        // Parse the inner index expression calculation
         ParseExpression(Precedence.None);
         Consume(TokenType.RightBracket, "Expected ']' after array index subscription reference.");
 
-        // Check if this subscript call is followed by an '=' for an array assignment write operation
         if (Match(TokenType.Equal))
         {
             ParseExpression(Precedence.None);
@@ -991,7 +938,7 @@ public class Parser
 
     // Track if compilation encountered errors to block execution of broken bytecode
     public bool HadError { get; private set; } = false;
-    private readonly string _currentFileName = "main.a"; // Tracks active source target naming conventions
+    private readonly string _currentFileName = "main.a"; // 'main.a' always for now
 
     private void ErrorAt(Token token, string message, string? suggestion = null)
     {
@@ -1013,14 +960,13 @@ public class Parser
         Diagnostics.DiagnosticPrinter.Print(error);
     }
 
-    // A panic mode helper to synchronize tokens and prevent cascading ghost errors
     private void Synchronize()
     {
         Advance();
 
         while (!IsAtEnd())
         {
-            // Stop synchronizing if we hit a statement boundary line break
+            // Stop synchronizing if it hits a statement boundary line break
             if (_previous().Type == TokenType.Newline) return;
 
             switch (Peek().Type)
@@ -1040,7 +986,6 @@ public class Parser
 
     private int ResolveLocal(string name)
     {
-        // Scan backwards from the current scope depth to respect lexical shadowing rules
         for (int i = _compiler.Locals.Count - 1; i >= 0; i--)
         {
             if (_compiler.Locals[i].Name == name)
@@ -1048,7 +993,7 @@ public class Parser
                 return i;
             }
         }
-        return -1; // Not found locally, must be a global variable lookup target
+        return -1;
     }
 
     private void CompileBlockScope()
@@ -1063,11 +1008,9 @@ public class Parser
         
         Consume(TokenType.RightBrace, "Expected '}' to close block scope boundaries.");
         
-        // Core VM Cleanup: When leaving a local scope, any variables declared inside must 
-        // be popped off the VM stack so the stack stays clean
         while (_compiler.Locals.Count > 0 && _compiler.Locals[^1].Depth == _compiler.ScopeDepth)
         {
-            _chunk.Write(OpCode.Pop); // Safely clear the variable off the VM stack
+            _chunk.Write(OpCode.Pop);
             _compiler.Locals.RemoveAt(_compiler.Locals.Count - 1);
         }
 
@@ -1077,14 +1020,13 @@ public class Parser
     private int EmitJump(OpCode instruction)
     {
         _chunk.Write(instruction);
-        _chunk.Write(0xff); // High byte placeholder
-        _chunk.Write(0xff); // Low byte placeholder
-        return _chunk.Code.Count - 2; // Return the position index of the placeholders
+        _chunk.Write(0xff);
+        _chunk.Write(0xff);
+        return _chunk.Code.Count - 2;
     }
 
     private void PatchJump(int offset)
     {
-        // Calculate exactly how many bytes of instructions were written since the placeholder
         int jumpDistance = _chunk.Code.Count - offset - 2;
 
         if (jumpDistance > ushort.MaxValue)
@@ -1092,14 +1034,13 @@ public class Parser
             throw new Exception("Too much code compiled inside conditional block scope.");
         }
 
-        // Rewrite the placeholder index with the actual computed jump coordinates
         _chunk.Code[offset]     = (byte)((jumpDistance >> 8) & 0xff);
         _chunk.Code[offset + 1] = (byte)(jumpDistance & 0xff);
     }
 
     private void EmitLoopJump(int loopStartOffset)
     {
-        _chunk.Write(OpCode.Loop); // Use explicit backward loop instruction
+        _chunk.Write(OpCode.Loop);
         int offset = _chunk.Code.Count + 2 - loopStartOffset;
         if (offset > ushort.MaxValue)
         {

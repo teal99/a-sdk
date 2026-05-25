@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using A.Core.Compiler;
-
 namespace A.Core.Common;
 
 public delegate Value NativeFunction(Value[] args);
@@ -34,8 +30,6 @@ public class Value
     private readonly NativeFunction? _nativeFnValue;
     private readonly FunctionObject? _functionValue;
     private readonly List<Value>? _arrayValue;
-
-    // --- NEW OBJECT TYPE BACKING FIELDS ---
     private readonly Dictionary<string, Value>? _dictionaryValue;
     private readonly InstanceObject? _instanceValue;
     private readonly Dictionary<string, Value>? _moduleValue;

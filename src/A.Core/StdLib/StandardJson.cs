@@ -36,7 +36,6 @@ public static class JsonModule
         return new Value(SerializeValue(args[0]));
     }
 
-    // --- RECURSIVE JSON TO NATIVE TYPE CONVERTER ---
     private static Value ConvertElement(JsonElement element)
     {
         return element.ValueKind switch
@@ -46,7 +45,7 @@ public static class JsonModule
             JsonValueKind.Number => new Value(element.GetDouble()),
             JsonValueKind.String => new Value(element.GetString() ?? ""),
             JsonValueKind.Array  => ConvertJsonArray(element),
-            _                    => new Value() // Default fallback to Nil
+            _                    => new Value()
         };
     }
 
@@ -57,7 +56,7 @@ public static class JsonModule
         {
             list.Add(ConvertElement(item));
         }
-        return new Value(list); // Returns your native Array primitive container type
+        return new Value(list);
     }
 
     private static string SerializeValue(Value val)

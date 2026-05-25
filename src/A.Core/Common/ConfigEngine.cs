@@ -4,7 +4,6 @@ public static class Config
 {
     public static bool RelayTokens { get; private set; } = false;
     public static bool RelayOpcodes { get; private set; } = false;
-    public static bool UseNativeVM { get; private set; } = false;
     public static string Environment { get; private set; } = "development";
 
     static Config()
@@ -27,7 +26,6 @@ public static class Config
 
                 RelayTokens = json.Contains("\"relaytokens\": true") || json.Contains("\"relaytokens\":true");
                 RelayOpcodes = json.Contains("\"relayopcodes\": true") || json.Contains("\"relayopcodes\":true");
-                UseNativeVM = json.Contains("\"usenativevm\": true") || json.Contains("\"usenativevm\":true");
                 Environment = json.Contains("\"environment\": \"development\"") || json.Contains("\"environment\":\"development\"") ? "development" : "production";
             }
         }
