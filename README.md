@@ -25,6 +25,22 @@ The workspace comes bundled with a single command orchestrator to manage your bu
 
 ---
 
+## The Native Standard Library Ecosystem (StdLib) (starter libraries)
+
+The runtime environment bindings are, of course, split into modular, native C# namespaces managed dynamically by the internal `StdLibRegistry.cs` lookup:
+
+* **`Standard.Console` (`StandardIO.cs` / `StandardGameTerminal.cs`)** -> Handles basic and terminal-focused text input/output tracking.
+* **`Standard.FS` (`StandardFS.cs`)** -> Direct file system operations (read, write, etc.).
+* **`Standard.Game.Visual` (`StandardGameVisual.cs`)** -> Hardware-accelerated Raylib rendering for now...
+* **`Standard.Math` (`StandardMath.cs`)** -> Native mathematical structures and numeric processing operations.
+* **`Standard.Json` (`StandardJson.cs`)** -> Basic JSON interaction methods, such as write and read!
+* **`Standard.Process` (`StandardProcess.cs`)** -> System process instantiation and OS command routing execution.
+* **`Standard.String` (`StandardString.cs`)** -> Generic string helpers...
+* **`Standard.Time` (`StandardTime.cs`)** -> High-precision execution cycle benchmarks (can be used for that too) and clock metrics mainly!
+* **`Standard.Collections` (`StandardCollections.cs`)** -> Generic array/list/dictionary helpers...
+
+---
+
 ## Hardware-Accelerated Graphics Sandbox Example (`main.a`)
 
 This eh language binds namespace utilities (`use Standard.Game.Visual as v`) directly to written native code, supporting keyboard state polling, canvas clears, and shape renders out of the box (for now):
